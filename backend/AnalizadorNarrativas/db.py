@@ -10,6 +10,8 @@ from datetime import datetime
 
 DB_PATH = "narrativa.db"
 
+ESTADOS_INCONSISTENCIA = ["pendiente", "intencional", "resuelta"]
+
 
 @contextmanager
 def get_conn():
@@ -79,7 +81,8 @@ def init_db():
                 valor_anterior TEXT,
                 valor_nuevo TEXT,
                 capitulo_anterior_numero INTEGER,
-                descripcion TEXT
+                descripcion TEXT,
+                estado TEXT NOT NULL DEFAULT 'pendiente'
             );
 
             CREATE TABLE IF NOT EXISTS analisis (
@@ -89,6 +92,22 @@ def init_db():
                 creado_en TEXT
             );
             """
+        )
+        _migrar_esquema(conn)
+
+
+def _migrar_esquema(conn):
+    """
+    Agrega columnas nuevas a bases de datos creadas con una versión anterior del
+    esquema. CREATE TABLE IF NOT EXISTS no modifica tablas que ya existen, así que
+    los cambios de esquema posteriores al primer lanzamiento se manejan aquí.
+    """
+    columnas_inconsistencias = [
+        r["name"] for r in conn.execute("PRAGMA table_info(inconsistencias)").fetchall()
+    ]
+    if "estado" not in columnas_inconsistencias:
+        conn.execute(
+            "ALTER TABLE inconsistencias ADD COLUMN estado TEXT NOT NULL DEFAULT 'pendiente'"
         )
 
 
@@ -314,11 +333,25 @@ def registrar_hecho(obra_id: int, entidad: str, atributo: str, valor: str, capit
         return None
 
 
-def list_inconsistencias(obra_id: int):
+def list_inconsistencias(obra_id: int, estado: str = None):
     with get_conn() as conn:
+        if estado:
+            return conn.execute(
+                "SELECT * FROM inconsistencias WHERE obra_id = ? AND estado = ? ORDER BY id DESC",
+                (obra_id, estado),
+            ).fetchall()
         return conn.execute(
             "SELECT * FROM inconsistencias WHERE obra_id = ? ORDER BY id DESC", (obra_id,)
         ).fetchall()
+
+
+def actualizar_estado_inconsistencia(inconsistencia_id: int, nuevo_estado: str):
+    if nuevo_estado not in ESTADOS_INCONSISTENCIA:
+        raise ValueError(f"Estado inválido: {nuevo_estado}. Debe ser uno de {ESTADOS_INCONSISTENCIA}.")
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE inconsistencias SET estado = ? WHERE id = ?", (nuevo_estado, inconsistencia_id)
+        )
 
 
 # ---------- Análisis ----------

@@ -238,11 +238,57 @@ with tab_bible:
 
 with tab_inconsist:
     st.subheader("Inconsistencias detectadas")
-    inconsistencias = db.list_inconsistencias(obra_id)
-    if not inconsistencias:
+    todas = db.list_inconsistencias(obra_id)
+
+    if not todas:
         st.success("No se han detectado inconsistencias de continuidad todavía. 🎉")
-    for inc in inconsistencias:
-        st.warning(inc["descripcion"])
+    else:
+        etiquetas_estado = {
+            "pendiente": "🔴 Pendiente",
+            "intencional": "🟡 Intencional",
+            "resuelta": "🟢 Resuelta",
+        }
+
+        conteo = {estado: 0 for estado in db.ESTADOS_INCONSISTENCIA}
+        for inc in todas:
+            conteo[inc["estado"]] = conteo.get(inc["estado"], 0) + 1
+
+        col1, col2, col3 = st.columns(3)
+        col1.metric("🔴 Pendientes", conteo["pendiente"])
+        col2.metric("🟡 Intencionales", conteo["intencional"])
+        col3.metric("🟢 Resueltas", conteo["resuelta"])
+
+        filtro = st.radio(
+            "Mostrar", ["Todas", "Pendientes", "Intencionales", "Resueltas"], horizontal=True
+        )
+        mapa_filtro = {
+            "Todas": None,
+            "Pendientes": "pendiente",
+            "Intencionales": "intencional",
+            "Resueltas": "resuelta",
+        }
+        mostrar = [
+            inc for inc in todas
+            if mapa_filtro[filtro] is None or inc["estado"] == mapa_filtro[filtro]
+        ]
+
+        if not mostrar:
+            st.caption("No hay inconsistencias en esta categoría.")
+
+        for inc in mostrar:
+            with st.container(border=True):
+                st.markdown(inc["descripcion"])
+                nuevo_estado = st.selectbox(
+                    "Estado",
+                    db.ESTADOS_INCONSISTENCIA,
+                    index=db.ESTADOS_INCONSISTENCIA.index(inc["estado"]),
+                    format_func=lambda e: etiquetas_estado[e],
+                    key=f"estado_inc_{inc['id']}",
+                    label_visibility="collapsed",
+                )
+                if nuevo_estado != inc["estado"]:
+                    db.actualizar_estado_inconsistencia(inc["id"], nuevo_estado)
+                    st.rerun()
 
 # ---------------- Tab: chat ----------------
 
