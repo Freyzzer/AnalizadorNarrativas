@@ -91,6 +91,13 @@ def init_db():
                 contenido_json TEXT NOT NULL,
                 creado_en TEXT
             );
+
+            CREATE TABLE IF NOT EXISTS cache_llm (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                clave TEXT NOT NULL UNIQUE,
+                respuesta TEXT NOT NULL,
+                creado_en TEXT
+            );
             """
         )
         _migrar_esquema(conn)
@@ -125,6 +132,12 @@ def create_obra(titulo: str, genero: str = "") -> int:
 def list_obras():
     with get_conn() as conn:
         return conn.execute("SELECT * FROM obras ORDER BY id DESC").fetchall()
+
+
+def get_obra(obra_id: int):
+    """Devuelve la fila de una obra (incluye su campo 'genero'), o None si no existe."""
+    with get_conn() as conn:
+        return conn.execute("SELECT * FROM obras WHERE id = ?", (obra_id,)).fetchone()
 
 
 # ---------- Capítulos ----------
@@ -206,10 +219,11 @@ def delete_capitulo(capitulo_id: int):
 
 def upsert_personaje(obra_id: int, nombre: str, descripcion: str, capitulo_numero: int, capitulo_id: int) -> int:
     """
-    Registra la aparición de un personaje en un capítulo. No sobrescribe su historia:
-    guarda esta descripción como una entrada nueva en personaje_historial y actualiza
-    'descripcion_actual' como un acceso rápido a su estado más reciente.
-    Devuelve el id del personaje.
+    Registra la aparición de un personaje (o, según el género literario de la obra,
+    una voz lírica, un concepto clave, etc. — ver llm.GENEROS) en un capítulo.
+    No sobrescribe su historia: guarda esta descripción como una entrada nueva en
+    personaje_historial y actualiza 'descripcion_actual' como un acceso rápido a
+    su estado más reciente. Devuelve el id del personaje.
     """
     with get_conn() as conn:
         existente = conn.execute(
@@ -373,12 +387,49 @@ def get_analisis(capitulo_id: int):
         return json.loads(row["contenido_json"]) if row else None
 
 
+# ---------- Caché de respuestas de Gemini ----------
+#
+# Evita repetir una llamada al modelo cuando ya se le hizo exactamente la misma
+# pregunta antes (mismo prompt + mismo texto de entrada). Esto pasa seguido:
+# re-abrir la app y volver a ver un capítulo, re-analizar sin haber cambiado el
+# texto, o hacerle al chat la misma pregunta dos veces. La clave (`clave`) la
+# arma llm.py como un hash de (modelo, tipo de llamada, prompt, contenido).
+
+def cache_get(clave: str):
+    """Devuelve la respuesta cruda (texto) guardada para esta clave, o None si no existe."""
+    with get_conn() as conn:
+        row = conn.execute("SELECT respuesta FROM cache_llm WHERE clave = ?", (clave,)).fetchone()
+        return row["respuesta"] if row else None
+
+
+def cache_set(clave: str, respuesta: str):
+    with get_conn() as conn:
+        conn.execute(
+            """
+            INSERT INTO cache_llm (clave, respuesta, creado_en) VALUES (?, ?, ?)
+            ON CONFLICT(clave) DO UPDATE SET respuesta = excluded.respuesta, creado_en = excluded.creado_en
+            """,
+            (clave, respuesta, datetime.utcnow().isoformat()),
+        )
+
+
+def cache_count() -> int:
+    with get_conn() as conn:
+        row = conn.execute("SELECT COUNT(*) as n FROM cache_llm").fetchone()
+        return row["n"]
+
+
+def cache_clear():
+    with get_conn() as conn:
+        conn.execute("DELETE FROM cache_llm")
+
+
 def story_bible_resumen(obra_id: int) -> str:
     """Genera un resumen compacto en texto de la story bible, para usar como contexto en prompts."""
     personajes = list_personajes(obra_id)
     if not personajes:
-        return "Todavía no hay personajes registrados."
-    lineas = ["Personajes establecidos hasta ahora:"]
+        return "Todavía no hay elementos registrados."
+    lineas = ["Elementos establecidos hasta ahora:"]
     for p in personajes:
         lineas.append(f"- {p['nombre']}: {p['descripcion_actual']}")
     return "\n".join(lineas)
