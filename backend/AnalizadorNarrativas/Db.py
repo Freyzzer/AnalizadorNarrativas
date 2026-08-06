@@ -125,6 +125,44 @@ def get_ultimo_numero_capitulo(obra_id: int) -> int:
         return (row["n"] or 0)
 
 
+def get_capitulo(capitulo_id: int):
+    with get_conn() as conn:
+        return conn.execute("SELECT * FROM capitulos WHERE id = ?", (capitulo_id,)).fetchone()
+
+
+def update_capitulo(capitulo_id: int, texto: str, titulo: str = "", numero: int = None):
+    with get_conn() as conn:
+        if numero is None:
+            conn.execute(
+                "UPDATE capitulos SET texto = ?, titulo = ? WHERE id = ?",
+                (texto, titulo, capitulo_id),
+            )
+        else:
+            conn.execute(
+                "UPDATE capitulos SET texto = ?, titulo = ?, numero = ? WHERE id = ?",
+                (texto, titulo, numero, capitulo_id),
+            )
+
+
+def limpiar_datos_generados_capitulo(capitulo_id: int):
+    """
+    Borra los hechos de continuidad, inconsistencias y análisis que se generaron
+    a partir de un capítulo. Se usa antes de re-analizarlo (para no duplicar datos)
+    o antes de eliminarlo (para no dejar registros huérfanos apuntando a un
+    capítulo que ya no existe).
+    """
+    with get_conn() as conn:
+        conn.execute("DELETE FROM hechos_continuidad WHERE capitulo_id = ?", (capitulo_id,))
+        conn.execute("DELETE FROM inconsistencias WHERE capitulo_id = ?", (capitulo_id,))
+        conn.execute("DELETE FROM analisis WHERE capitulo_id = ?", (capitulo_id,))
+
+
+def delete_capitulo(capitulo_id: int):
+    limpiar_datos_generados_capitulo(capitulo_id)
+    with get_conn() as conn:
+        conn.execute("DELETE FROM capitulos WHERE id = ?", (capitulo_id,))
+
+
 # ---------- Personajes ----------
 
 def upsert_personaje(obra_id: int, nombre: str, descripcion: str, capitulo_numero: int):
