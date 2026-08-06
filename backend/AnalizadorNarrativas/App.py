@@ -6,8 +6,8 @@ Requiere:   GEMINI_API_KEY configurada como variable de entorno.
 """
 
 import streamlit as st
-import Db as db
-import Llm as llm
+import db
+import llm
 
 st.set_page_config(page_title="Analizador de narrativas", page_icon="📖", layout="wide")
 db.init_db()
@@ -24,7 +24,7 @@ def analizar_y_guardar_capitulo(obra_id: int, capitulo_id: int, numero_cap: int,
     estructura = llm.extraer_estructura(texto)
 
     for p in estructura.get("personajes", []):
-        db.upsert_personaje(obra_id, p["nombre"], p["descripcion"], numero_cap)
+        db.upsert_personaje(obra_id, p["nombre"], p["descripcion"], numero_cap, capitulo_id)
 
     nuevas_inconsistencias = []
     for h in estructura.get("hechos_continuidad", []):
@@ -222,7 +222,16 @@ with tab_bible:
         st.info("Todavía no hay personajes registrados. Analiza tu primer capítulo.")
     for p in personajes:
         st.markdown(f'**{p["nombre"]}** _(desde el capítulo {p["primera_aparicion_cap"]})_')
-        st.markdown(p["descripcion_actual"])
+        st.markdown(f'**Estado actual:** {p["descripcion_actual"]}')
+
+        historial = db.get_historial_personaje(p["id"])
+        if len(historial) > 1:
+            with st.expander(f"📈 Ver evolución ({len(historial)} apariciones)"):
+                for h in historial:
+                    etiqueta_cap = f'Capítulo {h["capitulo_numero"]}'
+                    if h["capitulo_titulo"]:
+                        etiqueta_cap += f' — {h["capitulo_titulo"]}'
+                    st.markdown(f"**{etiqueta_cap}:** {h['descripcion']}")
         st.divider()
 
 # ---------------- Tab: inconsistencias ----------------
