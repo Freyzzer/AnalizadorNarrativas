@@ -1,5 +1,6 @@
-from fastapi import Query
+from fastapi import Depends, Query
 
+from auth.deps import Scope, get_scope
 from main import app
 from repositories.capitulo_repository import get_ultimo_numero_capitulo
 from repositories.cache_repository import cache_clear, cache_count
@@ -16,8 +17,8 @@ def cache_clear_api():
 
 
 @app.get("/api/meta")
-def meta(obra_id: int = Query(...)):
-    return {"ultimo_numero": get_ultimo_numero_capitulo(obra_id)}
+def meta(obra_id: int = Query(...), scope: Scope = Depends(get_scope)):
+    return {"ultimo_numero": get_ultimo_numero_capitulo(obra_id, scope)}
 
 
 @app.get("/health")
