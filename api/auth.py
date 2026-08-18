@@ -5,7 +5,7 @@ from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 
 from auth.deps import get_scope_optional
-from auth.session import borrar_cookie_jwt, crear_cookie_jwt
+from auth.session import borrar_cookie_jwt, crear_cookie_jwt, _hacer_jwt
 from main import GoogleLoginBody, app
 from repositories.user_repository import get_usuario_by_id, upsert_usuario_google
 
@@ -37,7 +37,8 @@ def login_google(body: GoogleLoginBody, response: Response):
         info["sub"], info.get("email"), info.get("name"), info.get("picture")
     )
     crear_cookie_jwt(response, usuario["id"])
-    return {"usuario": _usuario_publico(usuario)}
+    token = _hacer_jwt(usuario["id"])
+    return {"usuario": _usuario_publico(usuario), "token": token}
 
 
 @app.post("/auth/logout")

@@ -13,13 +13,14 @@ COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "lax")  # "lax" en dev (mismo sit
 
 def _hacer_jwt(usuario_id: int) -> str:
     exp = datetime.now(timezone.utc) + timedelta(days=JWT_EXP_DIAS)
-    return jwt.encode({"sub": usuario_id, "exp": exp}, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return jwt.encode({"sub": str(usuario_id), "exp": exp}, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
 def _leer_jwt(token: str):
     """Devuelve el usuario_id del JWT, o None si es inválido/expirado."""
     try:
-        return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM]).get("sub")
+        sub = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM]).get("sub")
+        return int(sub) if sub is not None else None
     except jwt.PyJWTError:
         return None
 

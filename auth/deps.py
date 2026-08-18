@@ -21,13 +21,21 @@ class Scope:
 
 
 def get_scope_optional(request: Request) -> Scope:
-    """Resuelve el dueño de la petición: cookie de sesión (usuario) o header X-Guest-Id (invitado)."""
+    """Resuelve el dueño de la petición: cookie de sesión, header Authorization, o X-Guest-Id."""
     from auth.session import _leer_jwt
 
     usuario_id = None
+
+    # 1) Cookie HttpOnly (funciona cuando el proxy reenvía Set-Cookie)
     token = request.cookies.get("session")
     if token:
         usuario_id = _leer_jwt(token)
+
+    # 2) Header Authorization: Bearer <jwt> (fallback para Vercel rewrites)
+    if usuario_id is None:
+        auth = request.headers.get("authorization", "")
+        if auth.startswith("Bearer "):
+            usuario_id = _leer_jwt(auth[7:])
 
     guest_id = request.headers.get("x-guest-id") or None
     return Scope(usuario_id=usuario_id, guest_id=guest_id)
