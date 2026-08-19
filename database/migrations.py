@@ -114,6 +114,14 @@ CREATE TABLE IF NOT EXISTS cache_llm (
     creado_en TEXT
 );
 
+CREATE TABLE IF NOT EXISTS usage_diaria (
+    id {PK_CLAUSE},
+    owner_key TEXT NOT NULL,
+    dia TEXT NOT NULL,
+    llamadas INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(owner_key, dia)
+);
+
 CREATE INDEX IF NOT EXISTS idx_obras_owner ON obras(usuario_id, guest_id);
 CREATE INDEX IF NOT EXISTS idx_capitulos_obra ON capitulos(obra_id);
 CREATE INDEX IF NOT EXISTS idx_personajes_obra ON personajes(obra_id);

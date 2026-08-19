@@ -31,7 +31,8 @@ def chat(body: ChatBody, scope: Scope = Depends(get_scope)):
     )
     try:
         respuesta = preguntar_sobre_historia(
-            body.pregunta, resumen_bible, recientes, genero
+            body.pregunta, resumen_bible, recientes, genero,
+            usuario_id=scope.usuario_id, guest_id=scope.guest_id,
         )
     except Exception as e:
         raise HTTPException(500, str(e)) from e

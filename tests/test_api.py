@@ -159,7 +159,8 @@ def test_inconsistencias_patch_ok():
 def test_chat_endpoint(monkeypatch):
     oid = _crear_obra()
 
-    def fake(pregunta, resumen, recientes, genero, forzar=False):
+    def fake(pregunta, resumen, recientes, genero, forzar=False,
+             usuario_id=None, guest_id=None):
         return "respuesta de prueba"
 
     monkeypatch.setattr("api.chat.preguntar_sobre_historia", fake)

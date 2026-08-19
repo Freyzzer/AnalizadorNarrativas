@@ -25,6 +25,11 @@ def cache_set(clave: str, respuesta: str):
         )
 
 
+def cache_delete(clave: str):
+    with get_conn() as conn:
+        conn.execute("DELETE FROM cache_llm WHERE clave = ?", (clave,))
+
+
 def cache_count() -> int:
     with get_conn() as conn:
         row = conn.execute("SELECT COUNT(*) as n FROM cache_llm").fetchone()

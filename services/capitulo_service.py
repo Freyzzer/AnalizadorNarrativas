@@ -12,7 +12,10 @@ from utils.html import html_a_texto
 def _analizar_y_guardar(obra_id, capitulo_id, numero_cap, texto, genero, scope: Scope, forzar=False):
     """Replica el pipeline de App.py.analizar_y_guardar_capitulo."""
     texto_plano = html_a_texto(texto)
-    estructura = analysis_service.extraer_estructura(texto_plano, genero, forzar=forzar)
+    uid, gid = scope.usuario_id, scope.guest_id
+    estructura = analysis_service.extraer_estructura(
+        texto_plano, genero, forzar=forzar, usuario_id=uid, guest_id=gid,
+    )
 
     for p in estructura.get("personajes", []):
         upsert_personaje(obra_id, p.get("nombre", ""), p.get("descripcion", ""), numero_cap, capitulo_id, scope)
@@ -27,7 +30,9 @@ def _analizar_y_guardar(obra_id, capitulo_id, numero_cap, texto, genero, scope: 
             nuevas_inconsistencias.append(resultado)
 
     resumen_bible = story_bible_resumen(obra_id, scope)
-    analisis = analysis_service.analizar_capitulo(texto_plano, resumen_bible, genero, forzar=forzar)
+    analisis = analysis_service.analizar_capitulo(
+        texto_plano, resumen_bible, genero, forzar=forzar, usuario_id=uid, guest_id=gid,
+    )
     desde_cache = llm_cache.ultima_fue_cache
     save_analisis(capitulo_id, analisis, scope)
     return analisis, nuevas_inconsistencias, desde_cache

@@ -29,6 +29,7 @@ TABLAS = [
     "obras",
     "usuarios",
     "cache_llm",
+    "usage_diaria",
 ]
 
 
