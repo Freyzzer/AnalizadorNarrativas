@@ -11,7 +11,7 @@ def save_analisis(capitulo_id: int, contenido: dict, scope: Scope):
             "INSERT INTO analisis (capitulo_id, contenido_json, usuario_id, guest_id, creado_en) "
             "VALUES (?, ?, ?, ?, ?)",
             (capitulo_id, json.dumps(contenido, ensure_ascii=False),
-             scope.usuario_id, scope.guest_id, datetime.utcnow().isoformat()),
+             *scope.owner_insert(), datetime.utcnow().isoformat()),
         )
 
 

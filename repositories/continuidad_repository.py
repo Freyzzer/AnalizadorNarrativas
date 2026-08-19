@@ -29,7 +29,7 @@ def registrar_hecho(obra_id: int, entidad: str, atributo: str, valor: str, capit
             "INSERT INTO hechos_continuidad (obra_id, entidad, atributo, valor, capitulo_id, "
             "usuario_id, guest_id, creado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (obra_id, entidad, atributo, valor, capitulo_id,
-             scope.usuario_id, scope.guest_id, datetime.utcnow().isoformat()),
+             *scope.owner_insert(), datetime.utcnow().isoformat()),
         )
 
         if anterior and anterior["valor"].strip().lower() != valor.strip().lower():
@@ -48,7 +48,7 @@ def registrar_hecho(obra_id: int, entidad: str, atributo: str, valor: str, capit
                 (
                     obra_id, capitulo_id, entidad, atributo,
                     anterior["valor"], valor, anterior["capitulo_numero"], descripcion,
-                    scope.usuario_id, scope.guest_id, datetime.utcnow().isoformat(),
+                    *scope.owner_insert(), datetime.utcnow().isoformat(),
                 ),
             )
             return descripcion

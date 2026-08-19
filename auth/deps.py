@@ -19,6 +19,14 @@ class Scope:
             [self.usuario_id, self.guest_id],
         )
 
+    def owner_insert(self) -> tuple:
+        """Valores mutuamente excluyentes para INSERTs.
+        Si hay usuario_id, NO guardamos guest_id (y viceversa), para que el
+        OR de owner_sql no filtre datos cruzados entre sesiones."""
+        if self.usuario_id is not None:
+            return self.usuario_id, None
+        return None, self.guest_id
+
 
 def get_scope_optional(request: Request) -> Scope:
     """Resuelve el dueño de la petición: cookie de sesión, header Authorization, o X-Guest-Id."""

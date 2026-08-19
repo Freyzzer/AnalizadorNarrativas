@@ -11,8 +11,7 @@ def add_capitulo(obra_id: int, numero: int, texto: str, titulo: str = "", scope:
             "INSERT INTO capitulos (obra_id, numero, titulo, texto, usuario_id, guest_id, creado_en) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (obra_id, numero, titulo, texto,
-             scope.usuario_id if scope else None, scope.guest_id if scope else None,
-             datetime.utcnow().isoformat()),
+             *scope.owner_insert(), datetime.utcnow().isoformat()),
         )
         return cur.lastrowid
 

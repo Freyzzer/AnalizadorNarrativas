@@ -29,7 +29,7 @@ def upsert_personaje(obra_id: int, nombre: str, descripcion: str, capitulo_numer
                 "INSERT INTO personajes (obra_id, nombre, descripcion_actual, primera_aparicion_cap, "
                 "usuario_id, guest_id, creado_en) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (obra_id, nombre, descripcion, capitulo_numero,
-                 scope.usuario_id, scope.guest_id, datetime.utcnow().isoformat()),
+                 *scope.owner_insert(), datetime.utcnow().isoformat()),
             )
             personaje_id = cur.lastrowid
 
@@ -37,7 +37,7 @@ def upsert_personaje(obra_id: int, nombre: str, descripcion: str, capitulo_numer
             "INSERT INTO personaje_historial (personaje_id, capitulo_id, capitulo_numero, descripcion, "
             "usuario_id, guest_id, creado_en) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (personaje_id, capitulo_id, capitulo_numero, descripcion,
-             scope.usuario_id, scope.guest_id, datetime.utcnow().isoformat()),
+             *scope.owner_insert(), datetime.utcnow().isoformat()),
         )
         return personaje_id
 

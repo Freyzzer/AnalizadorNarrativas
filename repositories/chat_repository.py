@@ -9,7 +9,7 @@ def save_chat(obra_id: int, pregunta: str, respuesta: str, scope: Scope):
         conn.execute(
             "INSERT INTO chats (obra_id, usuario_id, guest_id, pregunta, respuesta, creado_en) "
             "VALUES (?, ?, ?, ?, ?, ?)",
-            (obra_id, scope.usuario_id, scope.guest_id, pregunta, respuesta, datetime.utcnow().isoformat()),
+            (obra_id, *scope.owner_insert(), pregunta, respuesta, datetime.utcnow().isoformat()),
         )
 
 

@@ -37,3 +37,22 @@ def test_usuario_crea_y_ve_sus_obras(scope_otro_guest):
     assert len(obras) == 1 and obras[0]["usuario_id"] == usuario["id"]
     assert list_obras(scope_otro_guest) == []
     assert get_obra(oid, scope_otro_guest) is None
+
+
+def test_usuario_con_guest_id_no_contamina():
+    """Si un usuario logueado envía X-Guest-Id, la obra NO se puede ver como invitado."""
+    from repositories.user_repository import upsert_usuario_google
+    from auth.deps import Scope
+
+    usuario = upsert_usuario_google("sub-y", "y@x.com", "Y")
+    # Scope con AMBOS:模拟 el caso real donde el frontend envía X-Guest-Id + cookie
+    scope_both = Scope(usuario_id=usuario["id"], guest_id="g-leak")
+    oid = create_obra("No leak", "", scope_both)
+
+    # El usuario la ve
+    assert get_obra(oid, scope_both) is not None
+
+    # Un invitado con ese mismo guest_id NO la ve (owner_insert puso guest_id=None)
+    scope_guest_only = Scope(guest_id="g-leak")
+    assert get_obra(oid, scope_guest_only) is None
+    assert list_obras(scope_guest_only) == []

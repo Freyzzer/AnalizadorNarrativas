@@ -8,8 +8,7 @@ def create_obra(titulo: str, genero: str = "", scope: Scope = None) -> int:
     with get_conn() as conn:
         cur = conn.execute(
             "INSERT INTO obras (titulo, genero, usuario_id, guest_id, creado_en) VALUES (?, ?, ?, ?, ?)",
-            (titulo, genero, scope.usuario_id if scope else None, scope.guest_id if scope else None,
-             datetime.utcnow().isoformat()),
+            (titulo, genero, *scope.owner_insert(), datetime.utcnow().isoformat()),
         )
         return cur.lastrowid
 
